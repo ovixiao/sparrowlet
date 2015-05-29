@@ -12,9 +12,16 @@ class FdManager(dict):
     4. 指定 fd 发送数据: send
     '''
 
-    def __init__(self, epoll_fd, *args, **kargv):
+    def __init__(self, epoll_fd, task_class, *args, **kargv):
+        '''初始化
+
+        参数:
+            epoll_fd: epoll 的文件描述子
+            task_class: 实际数据操作的类
+        '''
         self.__super = super(FdManager, self)
         self.__super.__init__(*args, **kargv)
+        self.__task_class = task_class
         self.__epoll_fd = epoll_fd
 
     def new(self, address, new_socket, events):
@@ -27,8 +34,7 @@ class FdManager(dict):
         # 注册事件和 socket 到 eopll
         fd = new_socket.fileno()
         self.__epoll_fd.register(fd, events)
-
-        fd_info = FdInfo(address, new_socket)
+        fd_info = FdInfo(address, new_socket, self.__task_class)
         self[fd] = fd_info
 
     def __delitem__(self, fd):
@@ -75,10 +81,8 @@ class FdManager(dict):
 
         fd_info.receive()
         data = fd_info.received_data
-        print data
-        fd_info.clean()
-        fd_info.send(data)
-        # TODO: 接收完毕, 操作
+        # 接收完毕后交付给 task 进行操作
+        fd_info.task()
 
     def send(self, fd, data=None):
         '''指定 fd 传送数据
@@ -91,5 +95,3 @@ class FdManager(dict):
             return
 
         fd_info.send(data)
-        print "send"
-        # TODO: 传输完毕, 操作
