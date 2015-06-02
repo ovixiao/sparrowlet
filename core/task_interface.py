@@ -4,11 +4,14 @@
 
 class TaskInterface(object):
 
-    def __init__(self, fd_info):
-        self.__fd_info = fd_info
+    def __init__(self, fd_manager):
+        self.__fd_manager = fd_manager
 
-    def fd_info(self):
-        return self.__fd_info
+    def fd_info(self, fd):
+        return self.__fd_manager[fd]
 
-    def run(self, data):
+    def on_receive(self, fd):
+        pass
+
+    def on_send(self, fd):
         pass

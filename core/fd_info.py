@@ -12,23 +12,22 @@ class FdInfo(object):
 
     MAX_RECV_SIZE = 1024  # 每次接收数据的最大长度
 
-    def __init__(self, address, new_socket, task_class):
+    def __init__(self, address, new_socket):
         '''新建一个文件描述子, 初始化对应的 socket
 
         参数:
             address: 远端 IP 地址
             new_socket: fd 描述的 socket 实例
-            task_class: 逻辑操作的类
             timestamp: 上次操作的时间戳
             sending_data: 待发送的数据
             __received_data_list: 已经接收到的数据, 因为每次接收都是一串字符串,
-                如果直接进行字符串拼接时间消耗比较大, 所以存放到列表中
+                                  如果直接进行字符串拼接时间消耗比较大,
+                                  所以存放到列表中
         '''
         self.address = address
         self.socket = new_socket
         self.timestamp = time.time()
         self.sending_data = ''
-        self.__task = task_class(self)
         self.__received_data_list = []
         self.__init_socket()
 
@@ -36,7 +35,8 @@ class FdInfo(object):
         '''关闭 socket
         '''
         try:
-            self.socket.close()
+            if self.socket:
+                self.socket.close()
         except Exception as e:
             pass
 
@@ -57,7 +57,7 @@ class FdInfo(object):
             返回拼接好的字符串
         '''
         data = ''.join(self.__received_data_list)
-        self.__received_data_list = [data]
+        self.__received_data_list = []
         return data
 
     def receive(self):
@@ -109,12 +109,9 @@ class FdInfo(object):
                 else:
                     raise e
 
-    def clean(self):
-        '''清空接收到的数据
+    def clean_fd(self):
+        '''清空 fd
         '''
+        self.socket.close()
+        self.socket = None
         self.__received_data_list = []
-
-    def task(self):
-        data = self.received_data
-        self.__task.run(data)
-        self.clean()

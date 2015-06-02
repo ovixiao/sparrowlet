@@ -8,6 +8,7 @@ import select
 import time
 from fd_manager import FdManager
 from fd_info import FdInfo
+from task_manager import TaskManager
 
 
 class Loop(object):
@@ -19,40 +20,28 @@ class Loop(object):
     4. 接受数据: receive
     '''
 
-    def __init__(self, port, timeout, task_class):
+    def __init__(self, listen_fd, timeout, tasklet_num, task_class):
         '''初始化
 
         参数:
+            listen_fd: 监听 socket
             port: 监听端口
             timeout: 超时时长
-            task_class: 实际数据操作逻辑的类
+            tasklet_num: 微线程个数
         '''
         # 传入的参数
         self.timeout = timeout
-        # 初始化监听 socket
-        self.__init_listen(port)
+        self.listen_fd = listen_fd
         #  响应的事件
-        self.events = (select.EPOLLIN | select.EPOLLET | select.EPOLLERR |
-                       select.EPOLLHUP)
+        self.events = select.EPOLLIN | select.EPOLLERR | select.EPOLLHUP
         # epoll 的文件描述子
         self.epoll_fd = None
         self.__init_epoll()
         # 文件描述子管理器
-        self.fd_manager = FdManager(self.epoll_fd, task_class)
-
-    def new(self):
-        ''' 创建一个新的 fd, 会进行如下操作:
-        1. 接收监听 socket
-        2. 创建新的 fd, 加入到 fd 管理中
-        '''
-        while 1:
-            try:
-                # 接收监听获取到的新 socket
-                new_socket, addr = self.listen_fd.accept()
-                # 添加到 fd 管理
-                self.fd_manager.new(addr, new_socket, self.events)
-            except socket.error as e:
-                break
+        self.fd_manager = FdManager(self.epoll_fd)
+        # 任务管理器
+        self.__task = task_class(self.fd_manager)
+        self.task_manager = TaskManager(tasklet_num)
 
     def __init_listen(self, port):
         '''初始化监听 socket
@@ -60,11 +49,11 @@ class Loop(object):
         参数:
             port: 监听端口
         '''
-        self.listen_fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listen_fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+        self.listen_fd.setblocking(0)
         self.listen_fd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.listen_fd.bind(('', port))
-        self.listen_fd.listen(1024)
-        self.listen_fd.setblocking(0)
+        self.listen_fd.listen(10240)
 
     def __init_epoll(self):
         '''初始化 epoll, 注册各种操作 event
@@ -75,11 +64,55 @@ class Loop(object):
         except select.error as e:
             self.epoll_fd = None
 
+    def __event_new(self):
+        ''' 创建一个新的 fd, 会进行如下操作:
+        1. 接收监听 socket
+        2. 创建新的 fd, 加入到 fd 管理中
+        '''
+        while 1:
+            try:
+                # 接收监听获取到的新 socket
+                new_socket, addr = self.listen_fd.accept()
+                new_socket.setblocking(0)
+                new_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # 添加到 fd 管理
+                self.fd_manager.new(addr, new_socket, self.events)
+            except socket.error as e:
+                break
+
+    def __event_receive(self, fd):
+        try:
+            self.fd_manager.receive(fd)
+            self.epoll_fd.modify(fd, self.events | select.EPOLLOUT)
+        except socket.error as e:
+            del self.fd_manager[fd]
+
+        self.task_manager.new(self.__task.on_receive, fd)
+
+    def __event_send(self, fd):
+        try:
+            self.fd_manager.send(fd)
+            self.epoll_fd.modify(fd, self.events)
+        except socket.error as e:
+            del self.fd_manager[fd]
+
+        self.task_manager.new(self.__task.on_send, fd)
+
+    def __event_error(self, fd):
+        del self.fd_manager[fd]
+
     def run(self):
         '''epoll 的主循环, 会依据事件进行对应操作
         '''
         if self.epoll_fd is None:
             self.__init_epoll()
+
+        event_dict = {
+            select.EPOLLIN: self.__event_receive,
+            select.EPOLLOUT: self.__event_send,
+            select.EPOLLHUP: self.__event_error,
+            select.EPOLLERR: self.__event_error,
+        }
 
         while 1:
             # 等待 epoll 抛出事件
@@ -87,21 +120,12 @@ class Loop(object):
 
             for fd, events in epoll_list:
                 if fd == self.listen_fd.fileno():  # 新建
-                    self.new()
-                elif select.EPOLLIN & events:  # 接收
-                    try:
-                        self.fd_manager.receive(fd)
-                    except socket.error as e:
-                        del self.fd_manager[fd]
-                elif select.EPOLLOUT & events:  # 传送
-                    try:
-                        self.fd_manager.send(fd)
-                    except socket.error as e:
-                        del self.fd_manager[fd]
-                elif select.EPOLLHUP & events or select.EPOLLERR & events:
-                    del self.fd_manager[fd]
+                    self.__event_new()
                 else:
-                    continue
+                    try:
+                        event_dict[events](fd)
+                    except KeyError:
+                        continue
 
                 self.__check_timeout(fd)
 
