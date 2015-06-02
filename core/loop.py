@@ -6,6 +6,7 @@
 import socket
 import select
 import time
+import logging
 from fd_manager import FdManager
 from fd_info import FdInfo
 from task_manager import TaskManager
@@ -42,6 +43,8 @@ class Loop(object):
         # 任务管理器
         self.__task = task_class(self.fd_manager)
         self.task_manager = TaskManager(tasklet_num)
+        # log
+        self.logger = logging.getLogger()
 
     def __init_listen(self, port):
         '''初始化监听 socket
@@ -62,6 +65,7 @@ class Loop(object):
             self.epoll_fd = select.epoll()
             self.epoll_fd.register(self.listen_fd.fileno(), self.events)
         except select.error as e:
+            self.logger.critical(str(e))
             self.epoll_fd = None
 
     def __event_new(self):
@@ -78,6 +82,7 @@ class Loop(object):
                 # 添加到 fd 管理
                 self.fd_manager.new(addr, new_socket, self.events)
             except socket.error as e:
+                self.logger.error(str(e))
                 break
 
     def __event_receive(self, fd):
@@ -85,6 +90,7 @@ class Loop(object):
             self.fd_manager.receive(fd)
             self.epoll_fd.modify(fd, self.events | select.EPOLLOUT)
         except socket.error as e:
+            self.logger.error(str(e))
             del self.fd_manager[fd]
 
         self.task_manager.new(self.__task.on_receive, fd)
@@ -94,6 +100,7 @@ class Loop(object):
             self.fd_manager.send(fd)
             self.epoll_fd.modify(fd, self.events)
         except socket.error as e:
+            self.logger.error(str(e))
             del self.fd_manager[fd]
 
         self.task_manager.new(self.__task.on_send, fd)
@@ -125,6 +132,7 @@ class Loop(object):
                     try:
                         event_dict[events](fd)
                     except KeyError:
+                        self.logger.error(str(e))
                         continue
 
                 self.__check_timeout(fd)

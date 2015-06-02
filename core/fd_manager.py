@@ -54,6 +54,7 @@ class FdManager(dict):
         try:
             self.__epoll_fd.unregister(fd)
         except Exception as e:
+            self.logger.error(str(e))
             pass
 
     def __setitem__(self, fd, fd_info):

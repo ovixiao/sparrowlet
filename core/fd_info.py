@@ -3,6 +3,7 @@
 import time
 import socket
 import errno
+import logging
 
 
 class FdInfo(object):
@@ -30,6 +31,7 @@ class FdInfo(object):
         self.sending_data = ''
         self.__received_data_list = []
         self.__init_socket()
+        self.logger = logging.getLogger()
 
     def __del__(self):
         '''关闭 socket
@@ -38,6 +40,7 @@ class FdInfo(object):
             if self.socket:
                 self.socket.close()
         except Exception as e:
+            self.logger.error(str(e))
             pass
 
     def __init_socket(self):

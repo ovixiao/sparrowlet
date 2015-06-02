@@ -5,6 +5,7 @@ import core
 import socket
 import os
 import multiprocessing
+import logging
 
 
 class Task(core.TaskInterface):
@@ -14,6 +15,18 @@ class Task(core.TaskInterface):
 
     def on_send(self, fd):
         self.fd_info(fd).clean_fd()
+
+
+def init_logger(path, filename):
+    fmt = '%(levelname)s %(asctime)s %(filename)s|%(lineno)d %(message)s'
+    formatter = logging.Formatter(fmt)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    os.mkdir(path)
+    fh = logging.FileHandler("{}/{}".format(path, filename))
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
 
 def init_listen(port):
@@ -38,6 +51,7 @@ def main():
 
     port = 8888
     timeout = 10
+    init_logger('log', 'sparrow.log')
     process_num = multiprocessing.cpu_count()
     listen_fd = init_listen(port)
 
