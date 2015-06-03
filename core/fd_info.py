@@ -117,4 +117,3 @@ class FdInfo(object):
         '''
         self.socket.close()
         self.socket = None
-        self.__received_data_list = []

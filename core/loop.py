@@ -82,10 +82,10 @@ class Loop(object):
                 # 添加到 fd 管理
                 self.fd_manager.new(addr, new_socket, self.events)
             except socket.error as e:
-                self.logger.error(str(e))
                 break
 
     def __event_receive(self, fd):
+        self.logger.info("func=receive addr={} port={}".format(*self.fd_manager[fd].address))
         try:
             self.fd_manager.receive(fd)
             self.epoll_fd.modify(fd, self.events | select.EPOLLOUT)
@@ -96,6 +96,7 @@ class Loop(object):
         self.task_manager.new(self.__task.on_receive, fd)
 
     def __event_send(self, fd):
+        self.logger.info("func=send addr={} port={}".format(*self.fd_manager[fd].address))
         try:
             self.fd_manager.send(fd)
             self.epoll_fd.modify(fd, self.events)
@@ -132,7 +133,6 @@ class Loop(object):
                     try:
                         event_dict[events](fd)
                     except KeyError:
-                        self.logger.error(str(e))
                         continue
 
                 self.__check_timeout(fd)

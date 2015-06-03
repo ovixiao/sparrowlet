@@ -11,6 +11,8 @@ import logging
 class Task(core.TaskInterface):
 
     def on_receive(self, fd):
+        data = self.fd_info(fd).received_data
+        print data
         self.fd_info(fd).send('hahaha')
 
     def on_send(self, fd):
@@ -22,7 +24,10 @@ def init_logger(path, filename):
     formatter = logging.Formatter(fmt)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    os.mkdir(path)
+    try:
+        os.mkdir(path)
+    except OSError:
+        pass
     fh = logging.FileHandler("{}/{}".format(path, filename))
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)

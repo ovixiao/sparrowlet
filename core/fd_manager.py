@@ -80,7 +80,6 @@ class FdManager(dict):
             return
 
         fd_info.receive()
-        data = fd_info.received_data
 
     def send(self, fd, data=None):
         '''指定 fd 传送数据
