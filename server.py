@@ -20,6 +20,8 @@ class Task(core.TaskInterface):
 
 
 def init_logger(path, filename):
+    '''初始化日志
+    '''
     fmt = '%(levelname)s %(asctime)s %(filename)s|%(lineno)d %(message)s'
     formatter = logging.Formatter(fmt)
     logger = logging.getLogger()
