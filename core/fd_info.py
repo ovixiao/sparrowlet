@@ -117,3 +117,6 @@ class FdInfo(object):
         '''
         self.socket.close()
         self.socket = None
+
+    def append(self, data):
+        self.__received_data_list.append(data)

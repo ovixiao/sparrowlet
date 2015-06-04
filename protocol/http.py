@@ -1,23 +1,42 @@
-test_string = '''GET /%E3%82%A4%E3%83%A4%E3%83%9B%E3%83%B3%E3%83%BB%E3%83%98%E3%83%83%E3%83%89%E3%83%9B%E3%83%B3-%E3%82%AB%E3%83%8A%E3%83%AB-%E3%82%AA%E3%83%BC%E3%83%90%E3%83%BC%E3%83%98%E3%83%83%E3%83%89-%E3%82%AA%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA/b/ref=dp_bc_4?ie=UTF8&node=3477981 HTTP/1.1\r\nHost: 172.17.195.175:8888\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36\r\nAccept: */*\r\nDNT: 1\r\nReferer: http://172.17.195.175:8888/\r\nAccept-Encoding: gzip, deflate, sdch\r\nAccept-Language: zh-CN,zh;q=0.8,ja;q=0.6,en;q=0.4\r\n\r\ncontent\r\n
-'''
+#!/user/bin/env python
+# -*- encoding:utf-8 -*-
 import urllib
 
 class Http(object):
+    '''暂时够用的 HTTP 协议.
+    '''
 
     def __init__(self):
         self.header_params = {}
         self.get_params = {}
 
     def parse(self, data):
+        '''总体的解析函数
+
+        参数:
+            data: 获取到的 TCP 数据
+        '''
+        self.clean()
         headers = self.__parse_raw_data(data)
         self.__parse_header(headers)
         self.__parse_uri()
+        self.__parse_content()
+
+    def __parse_content(self):
+        content_len = int(self.header_params.get('Content-Length', 0))
+        self.left_data = self.content[content_len: ]
+        self.content = self.content[: content_len]
 
     def __parse_raw_data(self, data):
+        '''解析原始数据
+
+        参数:
+            data: 获取到的 TCP 数据
+        '''
         beg_index = 0
         end_index = 0
         headers = []
-        self.body = None
+        self.content = None
 
         while 1:
             try:
@@ -27,7 +46,7 @@ class Http(object):
 
             line = data[beg_index: end_index]
             if line == '':
-                self.body = data[end_index + 2: -2]
+                self.content = data[end_index + 2:]
                 break
             else:
                 headers.append(line)
@@ -36,6 +55,11 @@ class Http(object):
         return headers
 
     def __parse_header(self, headers):
+        '''解析 HTTP 头
+
+        参数:
+            header: 头信息总体数据
+        '''
         self.method, self.uri, self.version = headers[0].split(' ')
         for header in headers[1:-1]:
             try:
@@ -48,6 +72,8 @@ class Http(object):
             self.header_params[key] = value
 
     def __parse_uri(self):
+        '''解析 URI
+        '''
         try:
             beg_index = self.uri.index('?')
         except ValueError:
@@ -66,14 +92,28 @@ class Http(object):
             value = urllib.unquote(value.strip())
             self.get_params[key] = value
 
+    def format(self, header, content):
+        header['Content-Length'] = str(len(content))
+        header = '\r\n'.join([': '.join(x) for x in header.items()])
+        ret_str = 'HTTP/1.1 200 OK\r\n{header}\r\n\r\n{content}'.format(
+            header=header, content=content)
+        return ret_str
+
+    def clean(self):
+        self.header_params = {}
+        self.get_params = {}
+        self.content = ''
+        self.left_data = ''
+
+    def output(self):
+        print "uri:", self.uri
+        print "method:", self.method
+        print "version:", self.version
+        print "get:", self.get_params
+        print "header:", self.header_params
+        print "content", self.content
+
 
 if __name__ == '__main__':
     http = Http()
     http.parse(test_string)
-    print "uri:", http.uri
-    print "method:", http.method
-    print "version:", http.version
-    print "get:", http.get_params
-    print "header:", http.header_params
-    print "body", http.body
-
