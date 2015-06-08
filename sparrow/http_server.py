@@ -2,13 +2,22 @@
 # -*- encoding:utf-8 -*-
 import urllib
 
-class Http(object):
+class HttpServer(object):
     '''暂时够用的 HTTP 协议.
     '''
 
     def __init__(self):
         self.header_params = {}
         self.get_params = {}
+        self.content = ''
+        self.left_data = ''
+        self.__header = 'Content-Type: text/html;charset=utf-8\r\nConnection: keep-alive'
+
+    def clean(self):
+        self.header_params = {}
+        self.get_params = {}
+        self.content = ''
+        self.left_data = ''
 
     def parse(self, data):
         '''总体的解析函数
@@ -23,6 +32,8 @@ class Http(object):
         self.__parse_content()
 
     def __parse_content(self):
+        '''解析本体数据
+        '''
         content_len = int(self.header_params.get('Content-Length', 0))
         self.left_data = self.content[content_len: ]
         self.content = self.content[: content_len]
@@ -32,6 +43,9 @@ class Http(object):
 
         参数:
             data: 获取到的 TCP 数据
+
+        返回:
+            返回未处理的 HTTP 头数据
         '''
         beg_index = 0
         end_index = 0
@@ -79,7 +93,7 @@ class Http(object):
         except ValueError:
             return
 
-        get_line = self.uri[beg_index + 1: ]
+        get_line = self.uri[beg_index + 1:]
         self.uri = urllib.unquote(self.uri[:beg_index])
         get_params = get_line.split("&")
         for param in get_params:
@@ -92,28 +106,17 @@ class Http(object):
             value = urllib.unquote(value.strip())
             self.get_params[key] = value
 
-    def format(self, header, content):
-        header['Content-Length'] = str(len(content))
-        header = '\r\n'.join([': '.join(x) for x in header.items()])
+    def format(self, content):
+        '''格式化要发送的数据
+
+        参数:
+            content: 要发送的数据
+
+        返回:
+            返回包含 HTTP 头的数据
+        '''
+        content_len = str(len(content))
+        header = '{}\r\n{}'.format(self.__header, content_len)
         ret_str = 'HTTP/1.1 200 OK\r\n{header}\r\n\r\n{content}'.format(
             header=header, content=content)
         return ret_str
-
-    def clean(self):
-        self.header_params = {}
-        self.get_params = {}
-        self.content = ''
-        self.left_data = ''
-
-    def output(self):
-        print "uri:", self.uri
-        print "method:", self.method
-        print "version:", self.version
-        print "get:", self.get_params
-        print "header:", self.header_params
-        print "content", self.content
-
-
-if __name__ == '__main__':
-    http = Http()
-    http.parse(test_string)
