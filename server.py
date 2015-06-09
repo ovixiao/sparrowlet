@@ -16,4 +16,4 @@ if __name__ == '__main__':
     timeout = 10
     tasklet_num = 10
     svr = Svr(port, timeout, tasklet_num)
-    svr.run()
+    svr.run(0)

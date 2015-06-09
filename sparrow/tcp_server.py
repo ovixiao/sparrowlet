@@ -26,13 +26,14 @@ class TcpServer():
             3.4. 弹出接收到的数据: fd_manager.pop_received_data(fd)
     '''
 
-    def __init__(self, port, timeout, tasklet_num, process_num=0):
+    def __init__(self, port, timeout, tasklet_num):
         '''初始化
 
         参数:
+            port: 监听端口
+            timeout: 超时时长 (ms)
             tasklet_num: 微线程个数
         '''
-        self.__process_num = process_num
         self.__timeout = timeout
 
         self.__task_channel = stackless.channel()
@@ -49,8 +50,7 @@ class TcpServer():
             task = stackless.tasklet()
             task.bind(self.__process)
             task.setup()
-        stackless.run()
-        logger.info("{} tasklets started".format(tasklet_num))
+        logger.info("{} tasklets initialized".format(tasklet_num))
 
     def __process(self):
         '''每个微线程的主循环
@@ -79,23 +79,33 @@ class TcpServer():
         logger.info("initialize listener finished, port={}".format(port))
         return listen_fd
 
-    def run(self):
-        '''多进程启动
+    def __single_process_run(self):
+        '''单进程启动
+        IO Loop 也是使用 tasklet 启动的一个 "微线程"
         '''
-        if self.__process_num == 0:
-            self.__process_num = multiprocessing.cpu_count()
-
-        if self.__process_num > 1:
-            for i in xrange(self.__process_num):
-                new_pid = os.fork()
-                loop_pid = loop.Loop(self.__listen_fd, self.__timeout,
-                                     self.__task_channel)
-                loop_pid.run()
-        loop_pid = loop.Loop(self.__listen_fd, self.__timeout,
+        loop_obj = loop.Loop(self.__listen_fd, self.__timeout,
                              self.__task_channel)
-        loop_pid.run()
-        logger.info("processes started, processes={}".format(
-                    self.__process_num))
+        task = stackless.tasklet()
+        task.bind(loop_obj.run)
+        task.setup()
+        stackless.run()
+
+    def run(self, process_num=1):
+        '''支持多进程和单进程启动
+
+        参数:
+            process_num: 进程数, 默认为1, 如果设置为0则依据 CPU 核数决定
+        '''
+        if process_num == 0:
+            process_num = multiprocessing.cpu_count()
+
+        if process_num > 1:
+            for i in xrange(process_num):
+                new_pid = os.fork()
+                if new_pid == 0:
+                    self.__single_process_run()
+        self.__single_process_run()
+        logger.info("{} processes started".format(process_num))
 
     def on_receive(self, fd):
         '''接收完毕后的操作
