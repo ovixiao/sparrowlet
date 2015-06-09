@@ -14,6 +14,7 @@ logger = log.get_logger()
 # 单例模型
 def singleton(cls, *args, **kargs):
     instances = {}
+
     def _singleton():
         if cls not in instances:
             instances[cls] = cls(*args, **kargs)
@@ -25,8 +26,6 @@ class FdInfo(object):
     '''包含文件描述子的需要的信息. 文件描述子既可以描述一个接收的 socket,
     也可以描述一个发送的 socket.
     '''
-
-    MAX_RECV_SIZE = 1024  # 每次接收数据的最大长度
 
     def __init__(self, address, new_socket):
         '''新建一个文件描述子, 初始化对应的 socket
@@ -70,7 +69,7 @@ class FdInfo(object):
         self.timestamp = time.time()
         while 1:
             try:
-                data = self.socket.recv(self.__class__.MAX_RECV_SIZE)
+                data = self.socket.recv(1024)
                 if data:
                     self.received_data.append(data)
                 else:  # 传输完毕

@@ -63,7 +63,7 @@ class Loop(object):
         self.listen_fd.setblocking(0)
         self.listen_fd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.listen_fd.bind(('', port))
-        self.listen_fd.listen(10240)
+        self.listen_fd.listen(1024)
 
     def __init_io(self):
         '''初始化 io, 注册各种操作 event
@@ -89,14 +89,14 @@ class Loop(object):
                 # 接收监听获取到的新 socket
                 new_socket, addr = self.listen_fd.accept()
                 new_socket.setblocking(0)
-                new_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                new_socket.setsockopt(socket.SOL_SOCKET,
+                                      socket.SO_REUSEADDR, 1)
                 # 添加到 fd 管理
                 fd_manager.new(addr, new_socket, self.events)
             except socket.error as e:
                 break
 
     def __event_receive(self, fd):
-        logger.info("func=receive addr={} port={}".format(*fd_manager[fd].address))
         try:
             fd_manager.receive(fd)
             self.io_fd.modify(fd, self.events | EVENT_WRITE)

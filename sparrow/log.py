@@ -5,6 +5,7 @@ init_flag = False
 path = 'log'
 filename = 'sparrow.log'
 
+
 def get_logger():
     global init_flag
     if init_flag:
@@ -12,6 +13,7 @@ def get_logger():
     else:
         init_logger()
         return logging.getLogger()
+
 
 def init_logger():
     global path, filename, init_flag

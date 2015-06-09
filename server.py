@@ -5,7 +5,6 @@ fd_manager = sparrow.FdManager()
 class Svr(sparrow.TcpServer):
 
     def on_receive(self, fd):
-        print fd_manager.pop_received_data(fd)
         fd_manager.send(fd, "hello world!")
 
     def on_send(self, fd):
