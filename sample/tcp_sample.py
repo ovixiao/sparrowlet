@@ -4,6 +4,7 @@ import sparrow
 
 fd_manager = sparrow.FdManager()
 
+
 class Svr(sparrow.TcpServer):
 
     def on_receive(self, fd):
@@ -18,4 +19,5 @@ if __name__ == '__main__':
     timeout = 10
     tasklet_num = 10
     svr = Svr(port, timeout, tasklet_num)
+    # 可以带参数0来自适应开启多进程, 也可以指定进程数
     svr.run(0)
