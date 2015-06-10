@@ -213,3 +213,11 @@ class FdManager(dict):
             return
 
         return fd_info.received_data.pop_str()
+
+    def append_received_data(self, fd, data):
+        fd_info = self.get(fd)
+        if fd_info is None:
+            logger.error("Invalid fd {fd}".format(fd=fd))
+            return
+
+        fd_info.received_data.append(data)

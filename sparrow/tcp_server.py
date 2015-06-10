@@ -13,7 +13,7 @@ import log
 logger = log.get_logger()
 
 
-class TcpServer():
+class TcpServer(object):
     '''基于 stackless 的封装好的 TCP 服务器.
 
     支持如下操作:

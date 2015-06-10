@@ -1,3 +1,5 @@
+#!/user/bin/env python
+# -*- encoding:utf-8 -*-
 import logging
 import os
 
