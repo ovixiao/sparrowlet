@@ -1,4 +1,4 @@
-# Sparrow (麻雀)
+# Sparrowlet
 一个简单又实用的 TCP 服务器, 主要是基于 epoll 进行 IO select, 所以最好还是在 linux 上进行.
 其余基于 poll 的纯粹是为了能在 mac 上能调试.
 
@@ -10,13 +10,13 @@
 
 ## 2. 日志
 
-默认的日志路径位于 log 目录下的 sparrow.log, 由于使用了多进程, 所以不能用 logging 来做日期文件分割,
+默认的日志路径位于 log 目录下的 sparrowlet.log, 由于使用了多进程, 所以不能用 logging 来做日期文件分割,
 可使用如下代码来进行分割:
 
 ```shell
 DATE=`date +%Y%m%d`
-cp sparrow.log sparrow.log.${DATE}
-echo > sparrow.log
+cp sparrowlet.log sparrowlet.log.${DATE}
+echo > sparrowlet.log
 ```
 
 做成定时任务, 每天零点运行.
@@ -35,12 +35,12 @@ sample 目录下有 TCP 和 HTTP 的简单使用方法. 当然, 你也可以直�
 
 
 ```Python
-import sparrow
+import sparrowlet
 
-fd_manager = sparrow.FdManager()
+fd_manager = sparrowlet.FdManager()
 
 
-class Svr(sparrow.TcpServer):
+class Svr(sparrowlet.TcpServer):
 
     def on_receive(self, fd):
         fd_manager.send(fd, "hello world!")
@@ -62,10 +62,10 @@ if __name__ == '__main__':
 ### 3.2. HTTP 服务器
 
 ```Python
-import sparrow
+import sparrowlet
 
 
-class Test(sparrow.UriInterface):
+class Test(sparrowlet.UriInterface):
 
     def get(self):
         '''GET 方式发起请求的返回结果
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     port = 8888
     timeout = 10
     tasklet_num = 10
-    svr = sparrow.HttpServer(port, timeout, tasklet_num)
+    svr = sparrowlet.HttpServer(port, timeout, tasklet_num)
     # 注册 URI 的对应逻辑处理类
     uri_dict = {
         '/test': Test

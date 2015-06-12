@@ -1,11 +1,11 @@
 #!/user/bin/env python
 # -*- encoding:utf-8 -*-
-import sparrow
+import sparrowlet
 
-fd_manager = sparrow.FdManager()
+fd_manager = sparrowlet.FdManager()
 
 
-class Svr(sparrow.TcpServer):
+class Svr(sparrowlet.TcpServer):
 
     def on_receive(self, fd):
         fd_manager.send(fd, "hello world!")

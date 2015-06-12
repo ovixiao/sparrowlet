@@ -1,9 +1,9 @@
 #!/user/bin/env python
 # -*- encoding:utf-8 -*-
-import sparrow
+import sparrowlet
 
 
-class Test(sparrow.UriInterface):
+class Test(sparrowlet.UriInterface):
 
     def get(self):
         '''GET 方式发起请求的返回结果
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     port = 8888
     timeout = 10
     tasklet_num = 10
-    svr = sparrow.HttpServer(port, timeout, tasklet_num)
+    svr = sparrowlet.HttpServer(port, timeout, tasklet_num)
     # 注册 URI 的对应逻辑处理类
     uri_dict = {
         '/test': Test
